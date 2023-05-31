@@ -59,7 +59,7 @@ struct ContentView: View {
                     // validating buttons that can be pressed on an up movement
                     upDownButton = true
                     leftRightButton = false
-    
+                    
                     if (upDownButton) {
                         movementTimer?.invalidate()
                         movementTimer = Timer.scheduledTimer(withTimeInterval: 0.1, repeats : true) { timer in
@@ -84,8 +84,7 @@ struct ContentView: View {
                     Button("LEFT") {
                         upDownButton = false
                         leftRightButton = true
-                        positions.printList()
-
+                        
                         if (leftRightButton) {
                             movementTimer?.invalidate()
                             movementTimer = Timer.scheduledTimer(withTimeInterval: 0.1, repeats : leftRightButton) { timer in
@@ -190,7 +189,7 @@ struct ContentView: View {
     // Moves the palyer
     func movePlayer(arg1 direction: String) {
         var previousPos: CGPoint = positions.head!.position
-                
+        
         if (direction == "up") {
             positions.head!.position.y = positions.head!.position.y - blockSize
         }
@@ -213,8 +212,8 @@ struct ContentView: View {
             headNode = headNode?.next
         }
         
+        // Tells the view to update the position of the rectangle
         positions.objectWillChange.send()
-
     }
     
     // Checks for collision between player and food
@@ -222,7 +221,6 @@ struct ContentView: View {
         if (positions.head!.position.x == foodPosition.x && positions.head!.position.y == foodPosition.y){
             score+=1
             positions.addToList(pos: CGPoint(x: foodPosition.x, y: foodPosition.y))
-            positions.printList()
             foodPosition.x =  round(CGFloat.random(in: -17...17))*10
             foodPosition.y =  round(CGFloat.random(in: -17...17))*10
         }
