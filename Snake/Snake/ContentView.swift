@@ -12,7 +12,7 @@ private var highScore: Int = 0
 struct ContentView: View {
     // Player and Food initialization
     @State private var foodPosition: CGPoint =  CGPoint(x: round(CGFloat.random(in: -17...17))*10 , y: round(CGFloat.random(in: -17...17))*10)
-    @State private var playerPositions:[CGPoint] = [CGPoint(x: round(Double.random(in: -17...17))*10, y: round(Double.random(in: -17...17))*10)]
+    @StateObject private var positions: linkedList = linkedList(pos: CGPoint(x: round(CGFloat.random(in: -17...17))*10 , y: round(CGFloat.random(in: -17...17))*10))
     
     @State private var gameOver: Bool = false
     @State private var leftRightButton: Bool = false
@@ -20,7 +20,6 @@ struct ContentView: View {
     @State private var movementTimer : Timer?
     @State private var collided: Bool = false
     @State private var blockSize: CGFloat = 10
-    
     
     var body: some View {
         ZStack{
@@ -46,23 +45,24 @@ struct ContentView: View {
                         .fill(.red)
                         .frame(width: blockSize, height: blockSize)
                         .offset(x: foodPosition.x, y: foodPosition.y)
-                    // Drawing the player player
-                    ForEach(0..<playerPositions.count, id:\.self) {index in
+                    // Drawing the player
+                    ForEach(0..<positions.count(), id:\.self) {index in
                         Rectangle()
                             .fill(.black)
                             .frame(width: blockSize, height: blockSize)
-                            .offset(x: playerPositions[index].x, y: playerPositions[index].y)
+                            .offset(x: positions.positionAt(index: index).x, y: positions.positionAt(index: index).y)
                     }
                 }
                 
+                // Up movement
                 Button("UP") {
                     // validating buttons that can be pressed on an up movement
                     upDownButton = true
                     leftRightButton = false
-                    
+    
                     if (upDownButton) {
                         movementTimer?.invalidate()
-                        movementTimer = Timer.scheduledTimer(withTimeInterval: 0.1, repeats : upDownButton) {timer in
+                        movementTimer = Timer.scheduledTimer(withTimeInterval: 0.1, repeats : true) { timer in
                             movePlayer(arg1: "up")
                             checkCollision()
                             checkBounds()
@@ -84,7 +84,8 @@ struct ContentView: View {
                     Button("LEFT") {
                         upDownButton = false
                         leftRightButton = true
-                        
+                        positions.printList()
+
                         if (leftRightButton) {
                             movementTimer?.invalidate()
                             movementTimer = Timer.scheduledTimer(withTimeInterval: 0.1, repeats : leftRightButton) { timer in
@@ -109,6 +110,7 @@ struct ContentView: View {
                     Button("RIGHT") {
                         upDownButton = false
                         leftRightButton = true
+                        
                         if (leftRightButton) {
                             movementTimer?.invalidate()
                             movementTimer = Timer.scheduledTimer(withTimeInterval: 0.1, repeats : leftRightButton) { timer in
@@ -133,6 +135,7 @@ struct ContentView: View {
                 Button("DOWN") {
                     upDownButton = true
                     leftRightButton = false
+                    
                     if (upDownButton) {
                         movementTimer?.invalidate()
                         movementTimer = Timer.scheduledTimer(withTimeInterval: 0.1, repeats : upDownButton) { timer in
@@ -156,8 +159,9 @@ struct ContentView: View {
                 Button("Reset") {
                     foodPosition.x = round(CGFloat.random(in: -17...17))*10
                     foodPosition.y = round(CGFloat.random(in: -17...17))*10
-                    playerPositions.removeAll()
-                    playerPositions.append(CGPoint(x: round(CGFloat.random(in: -17...17))*10, y: round(CGFloat.random(in: -17...17))*10))
+                    // Resetting the player list
+                    positions.remove()
+                    positions.head!.position = CGPoint(x: round(CGFloat.random(in: -17...17))*10, y: round(CGFloat.random(in: -17...17))*10)
                     upDownButton = false
                     leftRightButton = false
                     movementTimer?.invalidate()
@@ -178,39 +182,47 @@ struct ContentView: View {
     
     // Keeps player within the bounds of the game board
     func checkBounds() {
-        if (playerPositions[0].x > 170 || playerPositions[0].x < -170 || playerPositions[0].y > 170 || playerPositions[0].y < -170) {
+        if (positions.head!.position.x > 170 || positions.head!.position.x < -170 || positions.head!.position.y > 170 || positions.head!.position.y < -170) {
             gameOver = true
         }
     }
     
     // Moves the palyer
     func movePlayer(arg1 direction: String) {
-        var previousPos: CGPoint = playerPositions[0]
+        var previousPos: CGPoint = positions.head!.position
+                
         if (direction == "up") {
-            playerPositions[0].y = playerPositions[0].y - 10
+            positions.head!.position.y = positions.head!.position.y - blockSize
         }
         else if (direction == "down") {
-            playerPositions[0].y = playerPositions[0].y + 10
+            positions.head!.position.y = positions.head!.position.y + blockSize
         }
         else if (direction == "left") {
-            playerPositions[0].x = playerPositions[0].x - 10
+            positions.head!.position.x = positions.head!.position.x - blockSize
         }
         else if (direction == "right") {
-            playerPositions[0].x = playerPositions[0].x + 10
+            positions.head!.position.x = positions.head!.position.x + blockSize
         }
-        // Moves body of the player
-        for i in 1..<playerPositions.count {
-            let current: CGPoint = playerPositions[i]
-            playerPositions[i] = previousPos
-            previousPos = current
+        var headNode:Node? = positions.head!.next
+        
+        // Moves the body of the player by shifting the positions over by 1 in the linked list
+        while (headNode != nil) {
+            let current = headNode?.position
+            headNode?.position = previousPos
+            previousPos = current!
+            headNode = headNode?.next
         }
+        
+        positions.objectWillChange.send()
+
     }
     
     // Checks for collision between player and food
     func checkCollision() {
-        if (playerPositions[0].x == foodPosition.x && playerPositions[0].y == foodPosition.y){
+        if (positions.head!.position.x == foodPosition.x && positions.head!.position.y == foodPosition.y){
             score+=1
-            playerPositions.append(CGPoint(x: foodPosition.x, y: foodPosition.y))
+            positions.addToList(pos: CGPoint(x: foodPosition.x, y: foodPosition.y))
+            positions.printList()
             foodPosition.x =  round(CGFloat.random(in: -17...17))*10
             foodPosition.y =  round(CGFloat.random(in: -17...17))*10
         }
